@@ -25,3 +25,6 @@ app.listen(process.env.PORT || 5000, ()=>{
   console.log("Server started");
 
 });
+import depositRoutes from "./src/routes/deposit.js";
+
+app.use("/api/deposit", depositRoutes);
