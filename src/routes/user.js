@@ -1,3 +1,4 @@
+import bot from "../services/telegram.js";
 import express from "express";
 import pool from "../db.js";
 import auth from "../middleware/auth.js";
@@ -33,17 +34,35 @@ router.post("/update-notif", auth, async (req, res) => {
 /**
  * Admin broadcast (test mode)
  */
-router.post("/admin/broadcast", async (req, res) => {
+router.post("/admin/broadcast", auth, async (req, res) => {
+
+  const adminCheck = await pool.query(
+    "SELECT is_admin FROM users WHERE id=$1",
+    [req.user.id]
+  );
+
+  if (!adminCheck.rows[0].is_admin)
+    return res.status(403).json({ message: "Not admin" });
+
   const { message } = req.body;
+
+  if (!message)
+    return res.status(400).json({ message: "No message" });
 
   const users = await pool.query(
     "SELECT telegram_id FROM users WHERE receive_notifications=true"
   );
 
-  console.log("Broadcast message:", message);
-  console.log("Users count:", users.rows.length);
+  let sent = 0;
 
-  res.json({ message: "Broadcast simulated" });
+  for (const user of users.rows) {
+    try {
+      await bot.sendMessage(user.telegram_id, message);
+      sent++;
+    } catch {}
+  }
+
+  res.json({ message: `Sent to ${sent} users` });
 });
-
 export default router;
+
