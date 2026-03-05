@@ -62,7 +62,7 @@ const userQuery = await pool.query(
 const telegramId = userQuery.rows[0].telegram_id;
 
 // 🔥 Send Telegram message
-await fetch(`https://api.telegram.org/bot${process.env.BOT_TOKEN}/sendMessage`,{
+await fetch(`https://api.telegram.org/bot${process.env.8657858140:AAE5x471nt9meWk3O_iHkKx5rMjV_TTIJbQ}/sendMessage`,{
   method:"POST",
   headers:{ "Content-Type":"application/json" },
   body: JSON.stringify({
