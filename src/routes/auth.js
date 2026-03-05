@@ -43,5 +43,6 @@ router.post("/telegram", async (req,res)=>{
 
   res.json({ token });
 });
+const startParam = req.body.start_param || null;
 
 export default router;
