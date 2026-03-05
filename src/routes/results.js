@@ -53,6 +53,23 @@ router.post("/admin/add", auth, async (req,res)=>{
      RETURNING *`,
     [score, feedback, user_id, service_id]
   );
+  // 🔥 Get user telegram_id
+const userQuery = await pool.query(
+  "SELECT telegram_id FROM users WHERE id=$1",
+  [user_id]
+);
+
+const telegramId = userQuery.rows[0].telegram_id;
+
+// 🔥 Send Telegram message
+await fetch(`https://api.telegram.org/bot${process.env.BOT_TOKEN}/sendMessage`,{
+  method:"POST",
+  headers:{ "Content-Type":"application/json" },
+  body: JSON.stringify({
+    chat_id: telegramId,
+    text: `🎉 Your ${service_id} test has been checked!\n\nScore: ${score}\n\n${feedback}`
+  })
+});
 
   if(result.rows.length === 0)
     return res.status(400).json({message:"No pending result found"});
