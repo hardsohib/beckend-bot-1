@@ -13,7 +13,11 @@ router.get("/", auth, async (req,res)=>{
 
 router.post("/purchase", auth, async (req,res)=>{
   const { service_id } = req.body;
-
+await pool.query(
+  `INSERT INTO results (user_id, service_id, status)
+   VALUES ($1,$2,'pending')`,
+  [req.user.id, service_id]
+);
   const service = await pool.query(
     "SELECT * FROM services WHERE id=$1",
     [service_id]
@@ -46,5 +50,6 @@ router.post("/purchase", auth, async (req,res)=>{
 
   res.json({message:"Success"});
 });
+
 
 export default router;
