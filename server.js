@@ -28,3 +28,6 @@ app.listen(process.env.PORT || 5000, ()=>{
 import depositRoutes from "./src/routes/deposit.js";
 
 app.use("/api/deposit", depositRoutes);
+
+import resultRoutes from "./src/routes/results.js";
+app.use("/api/results", resultRoutes);
