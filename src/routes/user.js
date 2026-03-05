@@ -64,5 +64,23 @@ router.post("/admin/broadcast", auth, async (req, res) => {
 
   res.json({ message: `Sent to ${sent} users` });
 });
+router.get("/referral-stats", auth, async (req,res)=>{
+
+  const totalEarned = await pool.query(
+    "SELECT COALESCE(SUM(amount),0) as total FROM transactions WHERE user_id=$1 AND type='referral'",
+    [req.user.id]
+  );
+
+  const totalUsers = await pool.query(
+    "SELECT COUNT(*) FROM users WHERE referred_by=$1",
+    [req.user.id]
+  );
+
+  res.json({
+    earned: totalEarned.rows[0].total,
+    users: totalUsers.rows[0].count
+  });
+});
 export default router;
+
 
