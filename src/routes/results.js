@@ -62,5 +62,28 @@ router.post("/admin/add", auth, async (req,res)=>{
 
   res.json({message:"Result added and sent"});
 });
+router.get("/admin/pending", auth, async (req,res)=>{
 
+  const adminCheck = await pool.query(
+    "SELECT is_admin FROM users WHERE id=$1",
+    [req.user.id]
+  );
+
+  if(!adminCheck.rows[0].is_admin)
+    return res.status(403).json({message:"Not admin"});
+
+  const pending = await pool.query(
+    `SELECT r.id,
+            r.user_id,
+            r.service_id,
+            u.username,
+            s.name
+     FROM results r
+     JOIN users u ON r.user_id = u.id
+     JOIN services s ON r.service_id = s.id
+     WHERE r.status='pending'`
+  );
+
+  res.json(pending.rows);
+});
 export default router;
