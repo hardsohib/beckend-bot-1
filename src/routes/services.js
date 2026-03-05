@@ -4,52 +4,75 @@ import auth from "../middleware/auth.js";
 
 const router = express.Router();
 
-router.get("/", auth, async (req,res)=>{
+/**
+ * Get active services
+ */
+router.get("/", auth, async (req, res) => {
   const services = await pool.query(
     "SELECT * FROM services WHERE is_active=true"
   );
+
   res.json(services.rows);
 });
 
-router.post("/purchase", auth, async (req,res)=>{
+/**
+ * Purchase service
+ */
+router.post("/purchase", auth, async (req, res) => {
   const { service_id } = req.body;
-await pool.query(
-  `INSERT INTO results (user_id, service_id, status)
-   VALUES ($1,$2,'pending')`,
-  [req.user.id, service_id]
-);
+
+  if (!service_id)
+    return res.status(400).json({ message: "Service ID required" });
+
+  // Check service exists
   const service = await pool.query(
     "SELECT * FROM services WHERE id=$1",
     [service_id]
   );
 
-  if(service.rows.length === 0)
-    return res.status(404).json({message:"Service not found"});
+  if (service.rows.length === 0)
+    return res.status(404).json({ message: "Service not found" });
 
+  // Check user balance
   const user = await pool.query(
     "SELECT * FROM users WHERE id=$1",
     [req.user.id]
   );
 
-  if(user.rows[0].balance < service.rows[0].price)
-    return res.status(400).json({message:"Not enough balance"});
+  if (user.rows[0].balance < service.rows[0].price)
+    return res.status(400).json({ message: "Not enough balance" });
 
-  await pool.query("BEGIN");
+  try {
+    await pool.query("BEGIN");
 
-  await pool.query(
-    "UPDATE users SET balance = balance - $1 WHERE id=$2",
-    [service.rows[0].price, req.user.id]
-  );
+    // Deduct balance
+    await pool.query(
+      "UPDATE users SET balance = balance - $1 WHERE id=$2",
+      [service.rows[0].price, req.user.id]
+    );
 
-  await pool.query(
-    "INSERT INTO transactions (user_id,type,amount,status) VALUES ($1,'service',$2,'completed')",
-    [req.user.id, -service.rows[0].price]
-  );
+    // Create transaction record
+    await pool.query(
+      "INSERT INTO transactions (user_id,type,amount,status) VALUES ($1,'service',$2,'completed')",
+      [req.user.id, -service.rows[0].price]
+    );
 
-  await pool.query("COMMIT");
+    // 🔥 Create pending result
+    await pool.query(
+      `INSERT INTO results (user_id, service_id, status)
+       VALUES ($1,$2,'pending')`,
+      [req.user.id, service_id]
+    );
 
-  res.json({message:"Success"});
+    await pool.query("COMMIT");
+
+    res.json({ message: "Success" });
+
+  } catch (err) {
+    await pool.query("ROLLBACK");
+    console.log(err);
+    res.status(500).json({ message: "Server error" });
+  }
 });
-
 
 export default router;
