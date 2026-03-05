@@ -22,9 +22,6 @@ router.post("/telegram", async (req,res)=>{
   const telegram_id = tgUser.id;
   const username = tgUser.username || "";
 
-  // 🔥 GET REFERRAL FROM TELEGRAM START PARAM
-  const startParam = params.get("start_param"); // very important
-
   let user = await pool.query(
     "SELECT * FROM users WHERE telegram_id=$1",
     [telegram_id]
@@ -32,33 +29,14 @@ router.post("/telegram", async (req,res)=>{
 
   let userData;
 
-  // ==============================
-  // CREATE NEW USER (WITH REFERRAL)
-  // ==============================
   if(user.rows.length === 0){
-
-    let referredById = null;
-
-    if(startParam){
-
-      const refUser = await pool.query(
-        "SELECT id FROM users WHERE referral_code=$1",
-        [startParam]
-      );
-
-      if(refUser.rows.length > 0){
-        referredById = refUser.rows[0].id;
-      }
-    }
-
-    const newCode = Math.random().toString(36).substring(2,8);
 
     const newUser = await pool.query(
       `INSERT INTO users 
-       (telegram_id, username, referral_code, referred_by, balance)
-       VALUES ($1,$2,$3,$4,0)
+       (telegram_id, username, balance)
+       VALUES ($1,$2,0)
        RETURNING *`,
-      [telegram_id, username, newCode, referredById]
+      [telegram_id, username]
     );
 
     userData = newUser.rows[0];
@@ -67,9 +45,6 @@ router.post("/telegram", async (req,res)=>{
     userData = user.rows[0];
   }
 
-  // ==============================
-  // CREATE JWT TOKEN
-  // ==============================
   const token = jwt.sign(
     { id: userData.id },
     process.env.JWT_SECRET,
