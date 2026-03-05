@@ -10,7 +10,12 @@ const router = express.Router();
  */
 router.get("/my", auth, async (req,res)=>{
   const results = await pool.query(
-    `SELECT r.id, r.score, r.feedback, r.created_at, s.name
+    `SELECT r.id,
+            r.status,
+            r.score,
+            r.feedback,
+            r.created_at,
+            s.name
      FROM results r
      JOIN services s ON r.service_id = s.id
      WHERE r.user_id=$1
@@ -20,7 +25,6 @@ router.get("/my", auth, async (req,res)=>{
 
   res.json(results.rows);
 });
-
 /**
  * Admin adds result
  */
