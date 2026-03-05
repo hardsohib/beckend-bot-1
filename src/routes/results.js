@@ -30,6 +30,8 @@ router.get("/my", auth, async (req,res)=>{
  */
 router.post("/admin/add", auth, async (req,res)=>{
 
+  const { user_id, service_id, score, feedback } = req.body;
+
   // check admin
   const adminCheck = await pool.query(
     "SELECT is_admin FROM users WHERE id=$1",
@@ -39,28 +41,23 @@ router.post("/admin/add", auth, async (req,res)=>{
   if(!adminCheck.rows[0].is_admin)
     return res.status(403).json({message:"Not admin"});
 
-  const { user_id, service_id, score, feedback } = req.body;
-
+  // update pending result (NOT insert)
   const result = await pool.query(
-    `INSERT INTO results (user_id, service_id, score, feedback)
-     VALUES ($1,$2,$3,$4)
+    `UPDATE results
+     SET score=$1,
+         feedback=$2,
+         status='completed'
+     WHERE user_id=$3
+       AND service_id=$4
+       AND status='pending'
      RETURNING *`,
-    [user_id, service_id, score, feedback]
+    [score, feedback, user_id, service_id]
   );
 
-  // get user's telegram_id
-  const user = await pool.query(
-    "SELECT telegram_id FROM users WHERE id=$1",
-    [user_id]
-  );
+  if(result.rows.length === 0)
+    return res.status(400).json({message:"No pending result found"});
 
-  // send via Telegram
-  await bot.sendMessage(
-    user.rows[0].telegram_id,
-    `📊 Your result is ready!\n\nScore: ${score}\n\n${feedback}`
-  );
-
-  res.json({message:"Result added and sent"});
+  res.json({message:"Result updated"});
 });
 router.get("/admin/pending", auth, async (req,res)=>{
 
