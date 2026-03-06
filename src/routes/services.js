@@ -57,16 +57,20 @@ router.post("/purchase", auth, async (req, res) => {
       [req.user.id, -service.rows[0].price]
     );
 
-    // 🔥 Create pending result
-    await pool.query(
+    // 🔥 Create result and return its id
+    const result = await pool.query(
       `INSERT INTO results (user_id, service_id, status)
-VALUES ($1,$2,'in_progress')`,
+       VALUES ($1,$2,'in_progress')
+       RETURNING id`,
       [req.user.id, service_id]
     );
 
     await pool.query("COMMIT");
 
-    res.json({ message: "Success" });
+    res.json({
+      message: "Success",
+      result_id: result.rows[0].id
+    });
 
   } catch (err) {
     await pool.query("ROLLBACK");
@@ -76,4 +80,3 @@ VALUES ($1,$2,'in_progress')`,
 });
 
 export default router;
-
