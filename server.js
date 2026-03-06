@@ -31,3 +31,4 @@ app.use("/api/deposit", depositRoutes);
 
 import resultRoutes from "./src/routes/results.js";
 app.use("/api/results", resultRoutes);
+app.use("/uploads", express.static("uploads"));
