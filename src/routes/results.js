@@ -141,5 +141,33 @@ router.post(
 
   }
 );
+router.get("/admin/pending", auth, async (req,res)=>{
 
+  const adminCheck = await pool.query(
+    "SELECT is_admin FROM users WHERE id=$1",
+    [req.user.id]
+  );
+
+  if(!adminCheck.rows[0]?.is_admin)
+    return res.status(403).json({message:"Not admin"});
+
+  const results = await pool.query(
+    `SELECT r.id,
+            r.user_id,
+            r.service_id,
+            r.topic_text,
+            r.topic_image,
+            r.essay_text,
+            r.essay_images,
+            u.username,
+            s.name
+     FROM results r
+     JOIN users u ON r.user_id = u.id
+     JOIN services s ON r.service_id = s.id
+     WHERE r.status='pending'
+     ORDER BY r.created_at ASC`
+  );
+
+  res.json(results.rows);
+});
 export default router;
