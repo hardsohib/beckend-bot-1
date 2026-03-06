@@ -60,7 +60,7 @@ router.post("/purchase", auth, async (req, res) => {
     // 🔥 Create pending result
     await pool.query(
       `INSERT INTO results (user_id, service_id, status)
-       VALUES ($1,$2,'pending')`,
+VALUES ($1,$2,'in_progress')`,
       [req.user.id, service_id]
     );
 
@@ -76,3 +76,4 @@ router.post("/purchase", auth, async (req, res) => {
 });
 
 export default router;
+
