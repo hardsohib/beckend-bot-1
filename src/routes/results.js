@@ -99,5 +99,28 @@ router.get("/admin/pending", auth, async (req,res)=>{
   );
 
   res.json(pending.rows);
+});router.post("/submit-writing", auth, async (req,res)=>{
+
+  const {
+    result_id,
+    topic_text,
+    topic_image,
+    essay_text,
+    essay_images
+  } = req.body;
+
+  await pool.query(
+    `UPDATE results
+     SET topic_text=$1,
+         topic_image=$2,
+         essay_text=$3,
+         essay_images=$4,
+         status='pending',
+         submitted_at=NOW()
+     WHERE id=$5 AND user_id=$6`,
+    [topic_text, topic_image, essay_text, essay_images, result_id, req.user.id]
+  );
+
+  res.json({message:"Submitted"});
 });
 export default router;
