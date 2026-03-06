@@ -2,6 +2,7 @@ import express from "express";
 import pool from "../db.js";
 import auth from "../middleware/auth.js";
 import bot from "../services/telegram.js";
+import upload from "../middleware/upload.js";
 
 const router = express.Router();
 
@@ -70,7 +71,7 @@ await fetch(`https://api.telegram.org/bot${process.env.BOT_TOKEN}/sendMessage`,{
     text: `🎉 Your ${service_id} test has been checked!\n\nScore: ${score}\n\n${feedback}`
   })
 });
-import upload from "../middleware/upload.js";
+
 
 router.post(
 "/submit-writing",
