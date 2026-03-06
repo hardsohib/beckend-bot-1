@@ -77,96 +77,51 @@ router.post(
 "/submit-writing",
 auth,
 upload.fields([
-{ name: "topic_image", maxCount: 1 },
-{ name: "essay_images", maxCount: 10 }
+  { name: "topic_image", maxCount: 1 },
+  { name: "essay_images", maxCount: 10 }
 ]),
 async (req,res)=>{
 
-const { result_id, topic_text, essay_text } = req.body;
+  try{
 
-let topicImage=null;
-let essayImages=[];
+    const { result_id, topic_text, essay_text } = req.body;
 
-if(req.files["topic_image"]){
-topicImage=req.files["topic_image"][0].filename;
-}
+    let topicImage = null;
+    let essayImages = [];
 
-if(req.files["essay_images"]){
-essayImages=req.files["essay_images"].map(f=>f.filename);
-}
+    if(req.files?.topic_image){
+      topicImage = req.files.topic_image[0].filename;
+    }
 
-await pool.query(
-`UPDATE results
-SET topic_text=$1,
-topic_image=$2,
-essay_text=$3,
-essay_images=$4,
-status='pending',
-submitted_at=NOW()
-WHERE id=$5 AND user_id=$6`,
-[
-topic_text,
-topicImage,
-essay_text,
-essayImages,
-result_id,
-req.user.id
-]
-);
+    if(req.files?.essay_images){
+      essayImages = req.files.essay_images.map(f => f.filename);
+    }
 
-res.json({message:"Submitted"});
-}
-);
-  if(result.rows.length === 0)
-    return res.status(400).json({message:"No pending result found"});
+    await pool.query(
+      `UPDATE results
+       SET topic_text=$1,
+           topic_image=$2,
+           essay_text=$3,
+           essay_images=$4,
+           status='pending',
+           submitted_at=NOW()
+       WHERE id=$5 AND user_id=$6`,
+      [
+        topic_text,
+        topicImage,
+        essay_text,
+        essayImages,
+        result_id,
+        req.user.id
+      ]
+    );
 
-  res.json({message:"Result updated"});
-});
-router.get("/admin/pending", auth, async (req,res)=>{
+    res.json({message:"Submitted"});
 
-  const adminCheck = await pool.query(
-    "SELECT is_admin FROM users WHERE id=$1",
-    [req.user.id]
-  );
+  }catch(err){
+    console.log(err);
+    res.status(500).json({message:"Submit error"});
+  }
 
-  if(!adminCheck.rows[0].is_admin)
-    return res.status(403).json({message:"Not admin"});
-
-  const pending = await pool.query(
-    `SELECT r.id,
-            r.user_id,
-            r.service_id,
-            u.username,
-            s.name
-     FROM results r
-     JOIN users u ON r.user_id = u.id
-     JOIN services s ON r.service_id = s.id
-     WHERE r.status='pending'`
-  );
-
-  res.json(pending.rows);
-});router.post("/submit-writing", auth, async (req,res)=>{
-
-  const {
-    result_id,
-    topic_text,
-    topic_image,
-    essay_text,
-    essay_images
-  } = req.body;
-
-  await pool.query(
-    `UPDATE results
-     SET topic_text=$1,
-         topic_image=$2,
-         essay_text=$3,
-         essay_images=$4,
-         status='pending',
-         submitted_at=NOW()
-     WHERE id=$5 AND user_id=$6`,
-    [topic_text, topic_image, essay_text, essay_images, result_id, req.user.id]
-  );
-
-  res.json({message:"Submitted"});
 });
 export default router;
