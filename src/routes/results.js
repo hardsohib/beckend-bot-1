@@ -70,7 +70,52 @@ await fetch(`https://api.telegram.org/bot${process.env.BOT_TOKEN}/sendMessage`,{
     text: `🎉 Your ${service_id} test has been checked!\n\nScore: ${score}\n\n${feedback}`
   })
 });
+import upload from "../middleware/upload.js";
 
+router.post(
+"/submit-writing",
+auth,
+upload.fields([
+{ name: "topic_image", maxCount: 1 },
+{ name: "essay_images", maxCount: 10 }
+]),
+async (req,res)=>{
+
+const { result_id, topic_text, essay_text } = req.body;
+
+let topicImage=null;
+let essayImages=[];
+
+if(req.files["topic_image"]){
+topicImage=req.files["topic_image"][0].filename;
+}
+
+if(req.files["essay_images"]){
+essayImages=req.files["essay_images"].map(f=>f.filename);
+}
+
+await pool.query(
+`UPDATE results
+SET topic_text=$1,
+topic_image=$2,
+essay_text=$3,
+essay_images=$4,
+status='pending',
+submitted_at=NOW()
+WHERE id=$5 AND user_id=$6`,
+[
+topic_text,
+topicImage,
+essay_text,
+essayImages,
+result_id,
+req.user.id
+]
+);
+
+res.json({message:"Submitted"});
+}
+);
   if(result.rows.length === 0)
     return res.status(400).json({message:"No pending result found"});
 
