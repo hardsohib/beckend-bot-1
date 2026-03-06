@@ -1,7 +1,6 @@
 import express from "express";
 import pool from "../db.js";
 import auth from "../middleware/auth.js";
-import bot from "../services/telegram.js";
 import upload from "../middleware/upload.js";
 
 const router = express.Router();
@@ -9,7 +8,7 @@ const router = express.Router();
 /**
  * User fetch own results
  */
-router.get("/my", auth, async (req,res)=>{
+router.get("/my", auth, async (req, res) => {
   const results = await pool.query(
     `SELECT r.id,
             r.status,
@@ -26,23 +25,24 @@ router.get("/my", auth, async (req,res)=>{
 
   res.json(results.rows);
 });
+
 /**
- * Admin adds result
+ * Admin adds result (complete test)
  */
-router.post("/admin/add", auth, async (req,res)=>{
+router.post("/admin/add", auth, async (req, res) => {
 
   const { user_id, service_id, score, feedback } = req.body;
 
-  // check admin
+  // Check admin
   const adminCheck = await pool.query(
     "SELECT is_admin FROM users WHERE id=$1",
     [req.user.id]
   );
 
-  if(!adminCheck.rows[0].is_admin)
-    return res.status(403).json({message:"Not admin"});
+  if (!adminCheck.rows[0]?.is_admin)
+    return res.status(403).json({ message: "Not admin" });
 
-  // update pending result (NOT insert)
+  // Update pending result
   const result = await pool.query(
     `UPDATE results
      SET score=$1,
@@ -54,74 +54,92 @@ router.post("/admin/add", auth, async (req,res)=>{
      RETURNING *`,
     [score, feedback, user_id, service_id]
   );
-  // 🔥 Get user telegram_id
-const userQuery = await pool.query(
-  "SELECT telegram_id FROM users WHERE id=$1",
-  [user_id]
-);
 
-const telegramId = userQuery.rows[0].telegram_id;
+  if (result.rows.length === 0)
+    return res.status(404).json({ message: "Pending result not found" });
 
-// 🔥 Send Telegram message
-await fetch(`https://api.telegram.org/bot${process.env.BOT_TOKEN}/sendMessage`,{
-  method:"POST",
-  headers:{ "Content-Type":"application/json" },
-  body: JSON.stringify({
-    chat_id: telegramId,
-    text: `🎉 Your ${service_id} test has been checked!\n\nScore: ${score}\n\n${feedback}`
-  })
-});
+  // Get user telegram_id
+  const userQuery = await pool.query(
+    "SELECT telegram_id FROM users WHERE id=$1",
+    [user_id]
+  );
 
+  const telegramId = userQuery.rows[0]?.telegram_id;
 
-router.post(
-"/submit-writing",
-auth,
-upload.fields([
-  { name: "topic_image", maxCount: 1 },
-  { name: "essay_images", maxCount: 10 }
-]),
-async (req,res)=>{
-
-  try{
-
-    const { result_id, topic_text, essay_text } = req.body;
-
-    let topicImage = null;
-    let essayImages = [];
-
-    if(req.files?.topic_image){
-      topicImage = req.files.topic_image[0].filename;
-    }
-
-    if(req.files?.essay_images){
-      essayImages = req.files.essay_images.map(f => f.filename);
-    }
-
-    await pool.query(
-      `UPDATE results
-       SET topic_text=$1,
-           topic_image=$2,
-           essay_text=$3,
-           essay_images=$4,
-           status='pending',
-           submitted_at=NOW()
-       WHERE id=$5 AND user_id=$6`,
-      [
-        topic_text,
-        topicImage,
-        essay_text,
-        essayImages,
-        result_id,
-        req.user.id
-      ]
+  // Send Telegram notification
+  if (telegramId) {
+    await fetch(
+      `https://api.telegram.org/bot${process.env.BOT_TOKEN}/sendMessage`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chat_id: telegramId,
+          text: `🎉 Your test has been checked!\n\nScore: ${score}\n\n${feedback}`
+        })
+      }
     );
-
-    res.json({message:"Submitted"});
-
-  }catch(err){
-    console.log(err);
-    res.status(500).json({message:"Submit error"});
   }
 
+  res.json({ message: "Result added" });
 });
+
+/**
+ * Submit Writing Test
+ */
+router.post(
+  "/submit-writing",
+  auth,
+  upload.fields([
+    { name: "topic_image", maxCount: 1 },
+    { name: "essay_images", maxCount: 10 }
+  ]),
+  async (req, res) => {
+
+    try {
+
+      const { result_id, topic_text, essay_text } = req.body;
+
+      let topicImage = null;
+      let essayImages = [];
+
+      if (req.files?.topic_image) {
+        topicImage = req.files.topic_image[0].filename;
+      }
+
+      if (req.files?.essay_images) {
+        essayImages = req.files.essay_images.map(f => f.filename);
+      }
+
+      await pool.query(
+        `UPDATE results
+         SET topic_text=$1,
+             topic_image=$2,
+             essay_text=$3,
+             essay_images=$4,
+             status='pending',
+             submitted_at=NOW()
+         WHERE id=$5 AND user_id=$6`,
+        [
+          topic_text,
+          topicImage,
+          essay_text,
+          essayImages,
+          result_id,
+          req.user.id
+        ]
+      );
+
+      res.json({ message: "Submitted successfully" });
+
+    } catch (err) {
+
+      console.log(err);
+      res.status(500).json({ message: "Submit error" });
+
+    }
+
+  }
+);
+
 export default router;
