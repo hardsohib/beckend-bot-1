@@ -117,58 +117,61 @@ router.post("/admin/add", auth, async (req, res) => {
  * Submit Writing Test
  */
 router.post(
-  "/submit-writing",
-  auth,
-  upload.fields([
-    { name: "topic_image", maxCount: 1 },
-    { name: "essay_images", maxCount: 10 }
-  ]),
-  async (req, res) => {
+"/submit-writing",
+auth,
+upload.fields([
+  { name:"topic_image", maxCount:1 },
+  { name:"essay_images", maxCount:10 }
+]),
+async (req,res)=>{
 
-    try {
+  try{
 
-      const { result_id, topic_text, essay_text } = req.body;
+    const { result_id, topic_text, essay_text } = req.body;
 
-      let topicImage = null;
-      let essayImages = [];
-
-      if (req.files?.topic_image) {
-        topicImage = req.files.topic_image[0].filename;
-      }
-
-      if (req.files?.essay_images) {
-        essayImages = req.files.essay_images.map(f => f.filename);
-      }
-
-      await pool.query(
-        `UPDATE results
-         SET topic_text=$1,
-             topic_image=$2,
-             essay_text=$3,
-             essay_images=$4,
-             status='pending',
-             submitted_at=NOW()
-         WHERE id=$5 AND user_id=$6`,
-        [
-          topic_text,
-          topicImage,
-          essay_text,
-          essayImages,
-          result_id,
-          req.user.id
-        ]
-      );
-
-      res.json({ message: "Submitted successfully" });
-
-    } catch (err) {
-
-      console.log(err);
-      res.status(500).json({ message: "Submit error" });
-
+    if(!result_id){
+      return res.status(400).json({message:"Missing result id"});
     }
 
+    let topicImage=null;
+    let essayImages=[];
+
+    if(req.files?.topic_image){
+      topicImage=req.files.topic_image[0].filename;
+    }
+
+    if(req.files?.essay_images){
+      essayImages=req.files.essay_images.map(f=>f.filename);
+    }
+
+    await pool.query(
+      `UPDATE results
+       SET topic_text=$1,
+           topic_image=$2,
+           essay_text=$3,
+           essay_images=$4,
+           status='pending',
+           submitted_at=NOW()
+       WHERE id=$5 AND user_id=$6`,
+      [
+        topic_text,
+        topicImage,
+        essay_text,
+        essayImages,
+        result_id,
+        req.user.id
+      ]
+    );
+
+    res.json({message:"Submitted"});
+
+  }catch(err){
+
+    console.log(err);
+    res.status(500).json({message:"Submit error"});
+
   }
-);
+
+});
 
 export default router;
