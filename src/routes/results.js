@@ -53,7 +53,12 @@ router.get("/admin/pending", auth, async (req,res)=>{
      ORDER BY r.created_at ASC`
   );
 
-  res.json(results.rows);
+ const safeResults = results.rows.map(r => ({
+  ...r,
+  essay_images: r.essay_images || []
+}));
+
+res.json(safeResults);
 });
 /**
  * Admin adds result (complete test)
