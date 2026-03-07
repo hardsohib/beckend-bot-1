@@ -150,24 +150,23 @@ async (req,res)=>{
     }
   
 await pool.query(
-      `UPDATE results
-       SET topic_text=$1,
-           topic_image=$2,
-           essay_text=$3,
-           essay_images=$4,
-           status='pending',
-           submitted_at=NOW()
-       WHERE id=$5 AND user_id=$6`,
-      [
-        topic_text,
-        topicImage,
-        essay_text,
-        essayImages,
-        result_id,
-        req.user.id
-      ] 
- 
-    );
+  `UPDATE results
+   SET topic_text=$1,
+       topic_image=$2,
+       essay_text=$3,
+       essay_images=$4::text[],
+       status='pending',
+       submitted_at=NOW()
+   WHERE id=$5 AND user_id=$6`,
+  [
+    topic_text || null,
+    topicImage || null,
+    essay_text || null,
+    essayImages,
+    result_id,
+    req.user.id
+  ]
+);
 
     res.json({message:"Submitted"});
 
