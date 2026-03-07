@@ -148,8 +148,8 @@ async (req,res)=>{
     if(req.files?.essay_images){
       essayImages=req.files.essay_images.map(f=>f.filename);
     }
-
-    await pool.query(
+  
+const result = await pool.query(
       `UPDATE results
        SET topic_text=$1,
            topic_image=$2,
@@ -165,7 +165,10 @@ async (req,res)=>{
         essayImages,
         result_id,
         req.user.id
-      ]
+      ] 
+  if(result.rowCount === 0){
+  return res.status(404).json({message:"Result not found"});
+}
     );
 
     res.json({message:"Submitted"});
